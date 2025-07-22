@@ -2,5 +2,3 @@
 * Within each folder is a sample_posterior.r script that will sample the posterior using Stan.
 * The model file location will need to be changed to point to the desired model.
 
-Preprint: TODO
-Data : TODO
