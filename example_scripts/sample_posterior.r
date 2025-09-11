@@ -16,15 +16,10 @@ cat("Detected cores: ", parallel::detectCores(), "\n", sep = "")
 # ---- data ----
 raw <- readr::read_csv("data.csv", show_col_types = FALSE)
 
-# If 'void' is missing, treat it as 0; coalesce any NAs to 0
-if (!"void" %in% names(raw)) raw <- dplyr::mutate(raw, void = 0)
-raw <- dplyr::mutate(raw, void = as.numeric(void))
-
 df <- raw |>
   dplyr::group_by(region, group, id) |>
   dplyr::summarise(
     y    = sum(counts),
-    area = sum((1 - dplyr::coalesce(void, 0) / 100) * (0.94 * 0.67)),
     .groups = "drop"
   ) |>
   dplyr::mutate(
@@ -40,14 +35,15 @@ cat("Regions: ", paste(levels(df$region), collapse = ", "), "\n", sep = "")
 cat("Groups : ", paste(levels(df$group),  collapse = ", "), "\n", sep = "")
 
 # ---- stan data ----
-stopifnot(all(df$area > 0))
 stan_data <- list(
   R          = nlevels(df$region),
   G          = nlevels(df$group),
   N          = nrow(df),
-  region_idx = as.integer(df$region),
+  mu_theta   = 5.0,
+  sigma_theta= 2.0,
+  sigma_tau  = log(1.05),
   group_idx  = as.integer(df$group),
-  E          = log(df$area),
+  region_idx = as.integer(df$region),	
   y          = df$y
 )
 stopifnot(length(unique(df$region)) == stan_data$R)

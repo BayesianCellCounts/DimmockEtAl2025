@@ -2,9 +2,11 @@ data{
   int R;             // Number of regions
   int N;
   int G;
+  real mu_theta;
+  real sigma_theta;
+  real sigma_tau;
   array[N] int<lower=1, upper=G> group_idx;
   array[N] int<lower=1, upper=R> region_idx;
-  vector[N] E;
   array[N] int<lower=0> y; // Observations
 }
 parameters{
@@ -21,18 +23,18 @@ transformed parameters{
 }
 model{
   for(i in 1:G){
-    tau[i]   ~ normal(0, log(1.05));
-    theta[i] ~ normal(5,2);
+    tau[i]   ~ normal(0, sigma_tau);
+    theta[i] ~ normal(mu_theta,sigma_theta);
   }
 
   gamma_raw ~ std_normal();
 
-  y ~ poisson_log(E + gamma);
+  y ~ poisson_log(gamma);
 }
 generated quantities{
   array[N] int y_rep;
 
   for(i in 1:N){
-      y_rep[i] = poisson_log_rng(E[i] + gamma[i]); // posterior predictions
+      y_rep[i] = poisson_log_rng(gamma[i]); // posterior predictions
   }
 }

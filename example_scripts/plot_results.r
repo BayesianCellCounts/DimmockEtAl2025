@@ -136,18 +136,12 @@ bayes_df <- tibble::tibble(
   b_high = hdi_mat[2, ]
 )
 
-## ---- Frequentist contrast: build counts_per_area from counts & void ----
-# Treat missing 'void' as 0, and coalesce NAs to 0
-data <- data %>% mutate(void = as.numeric(ifelse("void" %in% names(data), void, 0)))
-TILE_AREA <- 0.94 * 0.67
-
 sample_data <- data %>%
   dplyr::filter(region %in% regions_sel) %>%
   dplyr::group_by(region, group, id) %>%
   dplyr::summarise(
     counts_sum = sum(counts),
-    area_sum   = sum((1 - dplyr::coalesce(void, 0) / 100) * TILE_AREA),
-    mu_cpr     = log2(counts_sum / area_sum),
+    mu_cpr     = log2(counts_sum),
     .groups    = "drop"
   ) %>%
   dplyr::select(region, group, mu_cpr)
