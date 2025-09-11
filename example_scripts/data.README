@@ -11,3 +11,7 @@ Please see
 https://zenodo.org/records/12787211
 
 for a full description and credits.
+
+This version has been simplified to make it more generic to work as an
+example for other data; see case_study_1 for the code used in the
+paper and the version of the data file used there.
