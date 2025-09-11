@@ -15,16 +15,6 @@ id is a unique id for each animal, or hemisphere
 region is the brain region
 group is the condition
 count is the cell coint
-void is a percentage damage for the region, the counts are recalculated to be by dividing by area
-
-area = (1 - void / 100) * TILE_AREA
-
-where TILE_AREA is 0.6298; this number is somehow related to the data
-in case study 1, we will change this but at the moment it doesn't
-really matter.
-
-If the void column is absent void is taken as zero; the other columns
-are required.
 
 2_
 
