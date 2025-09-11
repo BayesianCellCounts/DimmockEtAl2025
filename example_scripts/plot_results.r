@@ -6,14 +6,13 @@ suppressPackageStartupMessages({
 
 ## ---- helpers ----
 canon <- function(x) { x <- tolower(x); x <- gsub("[^a-z0-9]+", "_", x); gsub("^_+|_+$", "", x) }
-initials <- function(x) { p <- unlist(strsplit(as.character(x), "_+")); p <- p[nzchar(p)]; paste0(toupper(substr(p,1,1)), collapse="") }
+initials <- function(x) { p <- unlist(strsplit(as.character(x), "_+")); p <- p[nzchar(p)]
+  paste0(toupper(substr(p,1,1)), collapse="") }
 read_region_list <- function(path) {
-  rl <- readr::read_lines(path, progress = FALSE)
-  rl <- trimws(rl); rl <- rl[nzchar(rl)]
+  rl <- readr::read_lines(path, progress = FALSE); rl <- trimws(rl); rl <- rl[nzchar(rl)]
   unique(rl)
 }
-print_help <- function() {
-  cat("
+print_help <- function() cat("
 Usage:
   Rscript plot_results.r TOP_GROUP BOTTOM_GROUP [regions.txt] [-o alpha|t|b|tabs|babs]
   Rscript plot_results.r --help
@@ -23,45 +22,34 @@ Required:
   BOTTOM_GROUP        Name of the 'bottom' group (case/punctuation insensitive)
 
 Optional:
-  regions.txt         Plain text file with one BrainRegion per line.
-                      If omitted, all regions are used.
-  -o ORDER            Ordering of regions on the x-axis:
-                        alpha  - alphabetical by region name
+  regions.txt         Plain text file with one region per line. If omitted, all regions are used.
+  -o ORDER            X-axis order:
+                        alpha  - alphabetical by region
                         t      - ascending frequentist mean (top - bottom)
                         b      - ascending Bayesian mean
                         tabs   - ascending |frequentist mean|
                         babs   - ascending |Bayesian mean|
 
 Details:
-  • Reads data from data.csv and a saved fit from fits/fit_poiss.rds (no re-sampling).
-  • Y-axis is log₂(TOP/BOTTOM); output PNG: results/INITIALS_TOP_INITIALS_BOTTOM.png
-  • X labels are rotated 45°.
-Examples:
-  Rscript plot_results.r Lesion_Familiar Lesion_Novel
-  Rscript plot_results.r Lesion_Familiar Lesion_Novel subset.txt -o alpha
-  Rscript plot_results.r 'lesion familiar' 'lesion-novel' -o babs
+  • Reads data from data.csv and fit from fits/fit_poiss.rds (no re-sampling).
+  • Y-axis: log₂(TOP/BOTTOM). Output: results/INITIALS_TOP_INITIALS_BOTTOM.png
+  • X labels rotated 45°.
 \n")
-}
 
 ## ---- CLI ----
 args <- commandArgs(trailingOnly = TRUE)
+if (any(args %in% c("--help","-h"))) { print_help(); quit(status=0) }
 
-# Help first
-if (any(args %in% c("--help", "-h"))) { print_help(); quit(status = 0) }
-
-# Extract -o ORDER if present (remove from args)
 o_mode <- NA_character_
 if (length(args)) {
   i <- which(args == "-o")
   if (length(i)) {
-    if (i == length(args)) stop("Flag -o requires a value (alpha|t|b|tabs|babs). Use --help for usage.")
-    o_mode <- tolower(args[i + 1])
-    args <- args[-c(i, i + 1)]
+    if (i == length(args)) stop("Flag -o needs a value (alpha|t|b|tabs|babs). See --help.")
+    o_mode <- tolower(args[i+1]); args <- args[-c(i, i+1)]
   }
 }
-if (!is.na(o_mode) && !o_mode %in% c("alpha","t","b","tabs","babs")) {
+if (!is.na(o_mode) && !o_mode %in% c("alpha","t","b","tabs","babs"))
   stop("Unknown -o mode: ", o_mode, " (use alpha|t|b|tabs|babs). See --help.")
-}
 
 if (length(args) < 2) { print_help(); stop("Need TOP_GROUP and BOTTOM_GROUP.") }
 top_req <- args[1]; bot_req <- args[2]
@@ -71,7 +59,7 @@ regions_file <- if (length(args) >= 3) args[3] else NA_character_
 data <- readr::read_csv("data.csv", show_col_types = FALSE) |>
   dplyr::select(-any_of("...1"))
 
-regions_full <- levels(factor(as.character(data$BrainRegion)))
+regions_full <- levels(factor(as.character(data$region)))
 groups       <- levels(factor(as.character(data$group)))
 Gd <- length(groups); Rfull <- length(regions_full)
 stopifnot(Gd >= 2, Rfull >= 1)
@@ -101,22 +89,21 @@ i1 <- as.integer(vapply(mm, function(x) x[2], "", USE.NAMES = FALSE))
 i2 <- as.integer(vapply(mm, function(x) x[3], "", USE.NAMES = FALSE))
 d1 <- max(i1); d2 <- max(i2)
 
-# identify which index = groups vs regions using FULL region count
+# which index = groups vs regions (use full region count from data)
 map <- if (d1 == Gd && d2 == Rfull) "gr" else if (d1 == Rfull && d2 == Gd) "rg" else NA
 if (is.na(map)) stop(sprintf("Fit dims theta[%d,%d] don't match data G=%d R=%d.", d1, d2, Gd, Rfull))
 
-## ---- region selection (optional file) ----
-canon_list <- function(v) { canon(v) }
+## ---- region selection (optional list) ----
 if (!is.na(regions_file)) {
   want_raw   <- read_region_list(regions_file)
-  want_canon <- canon_list(want_raw)
-  reg_keys   <- canon_list(regions_full)
+  want_canon <- canon(want_raw)
+  reg_keys   <- canon(regions_full)
   sel_idx    <- match(want_canon, reg_keys)
   if (any(is.na(sel_idx))) {
     missing <- want_raw[is.na(sel_idx)]
     cat("Unmatched regions in file:\n"); print(missing)
     cat("Available regions:\n"); print(regions_full)
-    stop("Some regions from file could not be matched (case/punct-insensitive).")
+    stop("Some regions from file could not be matched.")
   }
   regions_sel <- regions_full[sel_idx]
   sel_idx     <- as.integer(sel_idx)
@@ -130,13 +117,11 @@ Rsel <- length(sel_idx)
 samples <- array(NA_real_, dim = c(nrow(dm), Gd, Rsel))
 if (map == "gr") {
   for (g in seq_len(Gd)) for (j in seq_along(sel_idx)) {
-    r <- sel_idx[j]
-    samples[, g, j] <- dm[, paste0("theta[", g, ",", r, "]")]
+    r <- sel_idx[j]; samples[, g, j] <- dm[, paste0("theta[", g, ",", r, "]")]
   }
 } else {
   for (g in seq_len(Gd)) for (j in seq_along(sel_idx)) {
-    r <- sel_idx[j]
-    samples[, g, j] <- dm[, paste0("theta[", r, ",", g, "]")]
+    r <- sel_idx[j]; samples[, g, j] <- dm[, paste0("theta[", r, ",", g, "]")]
   }
 }
 
@@ -151,12 +136,23 @@ bayes_df <- tibble::tibble(
   b_high = hdi_mat[2, ]
 )
 
-## ---- Frequentist contrast: t-test CIs (restricted to selected regions) ----
+## ---- Frequentist contrast: build counts_per_area from counts & void ----
+# Treat missing 'void' as 0, and coalesce NAs to 0
+data <- data %>% mutate(void = as.numeric(ifelse("void" %in% names(data), void, 0)))
+TILE_AREA <- 0.94 * 0.67
+
 sample_data <- data %>%
-  dplyr::filter(BrainRegion %in% regions_sel) %>%
-  dplyr::group_by(BrainRegion, group, rat_ID) %>%
-  dplyr::summarise(mu_cpr = log2(mean(counts_per_area)), .groups = "drop") %>%
-  dplyr::select(-rat_ID)
+  dplyr::filter(region %in% regions_sel) %>%
+  dplyr::group_by(region, group, id) %>%
+  dplyr::summarise(
+    counts_sum = sum(counts),
+    area_sum   = sum((1 - dplyr::coalesce(void, 0) / 100) * TILE_AREA),
+    mu_cpr     = log2(counts_sum / area_sum),
+    .groups    = "drop"
+  ) %>%
+  dplyr::select(region, group, mu_cpr)
+
+stopifnot(all(is.finite(sample_data$mu_cpr)))
 
 run_t <- function(df, g_top, g_bot){
   df_top <- dplyr::filter(df, group == g_top)
@@ -173,9 +169,10 @@ run_t <- function(df, g_top, g_bot){
     t_high = t$conf.int[2]
   )
 }
+
 freq_df <- dplyr::bind_rows(
-  lapply(split(sample_data, sample_data$BrainRegion),
-         function(x) dplyr::bind_cols(region = unique(x$BrainRegion), run_t(x, top_label, bot_label)))
+  lapply(split(sample_data, sample_data$region),
+         function(x) dplyr::bind_cols(region = unique(x$region), run_t(x, top_label, bot_label)))
 )
 
 ## ---- decide x-axis order per -o ----
@@ -224,4 +221,3 @@ p <- ggplot2::ggplot(plot_df, ggplot2::aes(x = region, y = mean, group = model, 
 
 ggplot2::ggsave(outfile, plot = p, dpi = 600, width = 17.8, height = 17.8/4, units = "cm")
 cat("Wrote:", outfile, "\n")
- 
