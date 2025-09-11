@@ -1,18 +1,44 @@
 run
 
-sample_posterior.r first - this implements the models and save the chains
 
+1_
 
+sample_posterior.r
 
+this implements the models and save the chains, these are saved in a file called fit_poiss.rds
 
+2_
 
+plot_results.r 
 
+this makes the contrast plot which is figure 4 in the paper
 
+https://doi.org/10.7554/eLife.102391.1
 
+Rscript --vanilla plot_results.r --help
 
+will give the syntax; the command should look like this
 
+Rscript plot_results.r Lesion_Familiar Lesion_Novel
 
+In this first example this will plot the posterior sample for log_2 A/B
+where A is Lesion_Familiar and B is Lesion_Novel. The figure will save
+in results/ folder with the filename LF_LN.png. The two arguments are
+required.
 
+There are two optional arguments:
+
+Rscript plot_results.r Lesion_Familiar Lesion_Novel subset.txt -o alpha
+
+This will display only the subset of brain areas listed in subset.txt,
+subset.txt is a text file with a single column listing brain regions,
+an example called regions.txt is included in the files here. 
+
+The brain regions will be arranged in alphabetical order, this is the
+consequence of -o alpha, alternatives are t, b, tabs, and babs which
+order the brain regions in ascending order of the means, t, or the
+Bayesian sampled means, b or ascending order of the absolute values of
+these quantities.
 
 
 glossary:
