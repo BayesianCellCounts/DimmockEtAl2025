@@ -125,13 +125,16 @@ if (map == "gr") {
   }
 }
 
+
+
 ## ---- Bayesian contrast: log2(top/bottom) per selected region ----
 nat_diff <- samples[, top_idx, ] - samples[, bot_idx, ]
 log2_fc  <- nat_diff * log2(exp(1))
 hdi_mat  <- apply(log2_fc, 2, function(x) HDInterval::hdi(x, 0.95))
+    means <- apply(log2_fc, 2, mean)	     
 bayes_df <- tibble::tibble(
   region = regions_sel,
-  b_mean = colMeans(log2_fc),
+  b_mean = means,
   b_low  = hdi_mat[1, ],
   b_high = hdi_mat[2, ]
 )
@@ -140,8 +143,8 @@ sample_data <- data %>%
   dplyr::filter(region %in% regions_sel) %>%
   dplyr::group_by(region, group, id) %>%
   dplyr::summarise(
-    counts_sum = sum(counts),
-    mu_cpr     = log2(counts_sum),
+    counts_mean = mean(counts),
+    mu_cpr     = log2(counts_mean),
     .groups    = "drop"
   ) %>%
   dplyr::select(region, group, mu_cpr)

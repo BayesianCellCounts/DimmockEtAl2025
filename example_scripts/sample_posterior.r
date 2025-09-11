@@ -42,8 +42,8 @@ stan_data <- list(
   mu_theta   = 5.0,
   sigma_theta= 2.0,
   sigma_tau  = log(1.05),
-  group_idx  = as.integer(df$group),
   region_idx = as.integer(df$region),	
+group_idx  = as.integer(df$group),
   y          = df$y
 )
 stopifnot(length(unique(df$region)) == stan_data$R)
@@ -52,7 +52,7 @@ stopifnot(length(unique(df$group))  == stan_data$G)
 # ---- compile (threads enabled only if your Stan uses reduce_sum/map_rect) ----
 cat("Compiling model...\n")
 mod <- cmdstan_model(
-  "models/model_poiss.stan",
+  "models/model_hs.stan",
   cpp_options = list(stan_threads = TRUE)
 )
 cat("Compile done.\n")
